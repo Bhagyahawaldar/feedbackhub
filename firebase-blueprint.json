@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User submitted feedback",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the person giving feedback" },
+        "email": { "type": "string", "format": "email", "description": "Email of the person giving feedback" },
+        "message": { "type": "string", "description": "The feedback message text" },
+        "rating": { "type": "integer", "description": "Rating from 1 to 5" },
+        "status": { "type": "string", "enum": ["Pending", "Reviewed"], "description": "Current status of the feedback" },
+        "sentiment": { "type": "string", "enum": ["Positive", "Neutral", "Negative"], "description": "AI-detected sentiment" },
+        "summary": { "type": "string", "description": "AI-generated summary of the message" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation" }
+      },
+      "required": ["name", "email", "message", "rating", "status", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "System administrators",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "feedback": {
+      "schema": "Feedback",
+      "description": "Collection of all user feedback"
+    },
+    "admins": {
+      "schema": "Admin",
+      "description": "List of authorized administrators"
+    }
+  }
+}

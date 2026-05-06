@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'radhikasalolli@gmail.com'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Feedback Collection
+    match /feedback/{feedbackId} {
+      function isValidFeedback(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+               data.message is string && data.message.size() > 0 && data.message.size() <= 2000 &&
+               data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+               data.status in ['Pending', 'Reviewed'] &&
+               data.createdAt == request.time;
+      }
+
+      // Anonymous or signed in users can submit feedback
+      allow create: if isValidFeedback(incoming());
+
+      // Only admins can read all feedback
+      allow list: if isAdmin();
+      
+      // Admins or the person who knows the ID (for "track feedback" maybe?) can read individual
+      // For this app, let's keep it admin-only list/read for the dashboard.
+      allow get: if isAdmin();
+
+      // Only admins can update feedback (e.g. mark as reviewed)
+      allow update: if isAdmin() && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'summary', 'sentiment']) &&
+                    incoming().status in ['Pending', 'Reviewed'];
+
+      // Only admins can delete feedback
+      allow delete: if isAdmin();
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      // Only existing admins can add new ones, or the bootstrapped email
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      // For the first user, we rely on the hardcoded logic in isAdmin()
+    }
+  }
+}
